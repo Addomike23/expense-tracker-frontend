@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { addTransaction, getTransactions, updateTransaction } from "../services/api";
+import { useCurrency } from "../context/CurrencyContext";
 import { 
   ArrowLeftIcon,
   CurrencyDollarIcon,
@@ -34,6 +35,7 @@ function AddTransaction() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
+  const { symbol } = useCurrency();  // ← Get currency symbol from context
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -70,7 +72,7 @@ function AddTransaction() {
         });
       }
     } catch (error) {
-      
+      console.error("Failed to load transaction:", error);
     }
   };
 
@@ -219,14 +221,16 @@ function AddTransaction() {
               </div>
             </div>
 
-            {/* Amount */}
+            {/* Amount - Now uses currency symbol */}
             <div>
               <label className={labelClasses}>
                 Amount <span className="text-red-400">*</span>
               </label>
               <div className="relative group">
                 <div className={iconClasses}>
-                  <CurrencyDollarIcon className={`h-5 w-5 ${formData.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`} />
+                  <span className={`text-lg font-medium ${formData.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {symbol}
+                  </span>
                 </div>
                 <input
                   type="number"
@@ -235,13 +239,13 @@ function AddTransaction() {
                   required
                   value={formData.amount}
                   onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                  className={inputClasses}
+                  className={`${inputClasses} pl-12`}
                   placeholder="0.00"
                 />
               </div>
             </div>
 
-            {/* Category */}
+            {/* Category - unchanged */}
             <div>
               <label className={labelClasses}>
                 Category <span className="text-red-400">*</span>
@@ -279,7 +283,7 @@ function AddTransaction() {
                 <label className={labelClasses}>Description</label>
                 <div className="relative group">
                   <div className={iconClasses}>
-                    <DocumentTextIcon className="h-5 w-5 text-gray-500 group-focus-within:text-yellow-400 transition-colors" />
+                    <DocumentTextIcon className="h-5 w-5 text-gray-500" />
                   </div>
                   <input
                     type="text"
@@ -296,7 +300,7 @@ function AddTransaction() {
                 <label className={labelClasses}>Date</label>
                 <div className="relative group">
                   <div className={iconClasses}>
-                    <CalendarDaysIcon className="h-5 w-5 text-gray-500 group-focus-within:text-yellow-400 transition-colors" />
+                    <CalendarDaysIcon className="h-5 w-5 text-gray-500" />
                   </div>
                   <input
                     type="date"
@@ -313,7 +317,7 @@ function AddTransaction() {
                 <label className={labelClasses}>Payment Method</label>
                 <div className="relative group">
                   <div className={iconClasses}>
-                    <CreditCardIcon className="h-5 w-5 text-gray-500 group-focus-within:text-yellow-400 transition-colors" />
+                    <CreditCardIcon className="h-5 w-5 text-gray-500" />
                   </div>
                   <select
                     value={formData.paymentMethod}
@@ -335,7 +339,7 @@ function AddTransaction() {
                 <label className={labelClasses}>Location</label>
                 <div className="relative group">
                   <div className={iconClasses}>
-                    <MapPinIcon className="h-5 w-5 text-gray-500 group-focus-within:text-yellow-400 transition-colors" />
+                    <MapPinIcon className="h-5 w-5 text-gray-500" />
                   </div>
                   <input
                     type="text"
@@ -370,7 +374,7 @@ function AddTransaction() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-yellow-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] shadow-lg shadow-yellow-500/25"
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-400 hover:to-orange-400 disabled:opacity-60 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] shadow-lg shadow-yellow-500/25"
               >
                 {loading ? (
                   <>
