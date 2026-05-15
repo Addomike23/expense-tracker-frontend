@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://expense-tracker-frontend-theta-one.vercel.app/';
+const API_BASE_URL = 'https://expense-tracker-frontend-theta-one.vercel.app/api';
 //                                                                                                ^^^^ add /api
 
 let isRefreshing = false;
