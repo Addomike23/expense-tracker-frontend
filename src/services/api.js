@@ -1,6 +1,6 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5000'|| 'https://expense-tracker-server-bay.vercel.app/';
+const
+const API_BASE_URL =  'https://expense-tracker-server-bay.vercel.app/';
 
 let isRefreshing = false;
 let failedQueue = [];
