@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://expense-tracker-server-bay.vercel.app/';
-//                                                                                                ^^^^ add /api
+const API_BASE_URL = 'http://localhost:5000'|| 'https://expense-tracker-server-bay.vercel.app/';
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -34,27 +33,27 @@ api.interceptors.request.use(
         }
         return config;
     },
-    error => {
-        return Promise.reject(error);
-    }
+    error => Promise.reject(error)
 );
 
-// Response interceptor with token refresh
+// Response interceptor
 api.interceptors.response.use(
     response => response,
     async error => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 400 && error.response?.data?.message?.includes('JSON')) {
+        // Don't retry login/register requests
+        if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {
             return Promise.reject(error);
         }
 
+        // If not 401 or already retried, reject
         if (error.response?.status !== 401 || originalRequest._retry) {
             return Promise.reject(error);
         }
 
+        // If no token at all, just reject (App.jsx handles redirect)
         if (!localStorage.getItem('access_token')) {
-            window.location.href = '/login';
             return Promise.reject(error);
         }
 
@@ -90,10 +89,13 @@ api.interceptors.response.use(
 
         } catch (refreshError) {
             processQueue(refreshError, null);
+            
+            // Clear auth data
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
 
-            if (window.location.pathname !== '/login') {
+            // Only redirect if not already on login page
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
                 window.location.href = '/login';
             }
 
@@ -112,8 +114,8 @@ export const refreshToken = () => api.post('/auth/refresh');
 export const getCurrentUser = () => api.get('/auth/me');
 export const updateProfile = (data) => api.put('/auth/me', data);
 export const changePassword = (data) => api.put('/auth/password', data);
-export const updateCurrency = (currency) => api.put('/auth/currency', { currency });        // ← NEW
-export const getAvailableCurrencies = () => api.get('/auth/currencies');                     // ← NEW
+export const updateCurrency = (currency) => api.put('/auth/currency', { currency });
+export const getAvailableCurrencies = () => api.get('/auth/currencies');
 export const forgotPassword = (email) => api.post('/auth/forgot-password', { email });
 export const resetPassword = (token, password) => api.post(`/auth/reset-password/${token}`, { password });
 export const deleteAccount = () => api.delete('/auth/me');

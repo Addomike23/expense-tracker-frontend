@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getCategories, createBudget, updateBudget, deleteBudget } from "../services/api";
+import { getCategories, getBudgets, createBudget, updateBudget, deleteBudget } from "../services/api";
 import { useCurrency } from "../context/CurrencyContext";
 import { 
   PencilIcon, 
@@ -16,7 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 function Categories() {
-  const { formatAmount, symbol } = useCurrency();  // ← Currency context
+  const { formatAmount, symbol } = useCurrency();
   
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,42 +52,103 @@ function Categories() {
     fetchCategories();
   }, [period]);
 
-  const fetchCategories = async () => {
+ const fetchCategories = async () => {
     setLoading(true);
     try {
-      const response = await getCategories(period);
-      const data = response.data?.data || response.data || [];
-      setCategories(data);
-      setError(null);
+        // Fetch BOTH categories AND budgets
+        const [categoriesRes, budgetsRes] = await Promise.all([
+            getCategories(period),
+            getBudgets()  // ← ADD THIS
+        ]);
+
+        const categoryData = categoriesRes.data?.data || categoriesRes.data || [];
+        const budgetData = budgetsRes.data?.data || budgetsRes.data || [];
+
+        // Merge budget info into categories
+        const merged = categoryData.map(cat => {
+            const matchingBudget = budgetData.find(b => b.category === cat.name);
+            return {
+                ...cat,
+                budget: matchingBudget ? {
+                    id: matchingBudget._id,
+                    amount: matchingBudget.budget,
+                    spent: matchingBudget.spent,
+                    remaining: matchingBudget.remaining,
+                    percentage: matchingBudget.percentage,
+                    status: matchingBudget.status,
+                    alertThreshold: matchingBudget.alertThreshold
+                } : null
+            };
+        });
+
+        // Also add categories that have budgets but no transactions yet
+        budgetData.forEach(b => {
+            if (!merged.find(c => c.name === b.category)) {
+                merged.push({
+                    name: b.category,
+                    display_name: b.name || b.category,
+                    total_spent: 0,
+                    transaction_count: 0,
+                    budget: {
+                        id: b._id,
+                        amount: b.budget,
+                        spent: b.spent || 0,
+                        remaining: b.remaining || b.budget,
+                        percentage: b.percentage || 0,
+                        status: b.status || 'good',
+                        alertThreshold: b.alertThreshold
+                    }
+                });
+            }
+        });
+
+        setCategories(merged);
+        setError(null);
     } catch (error) {
-      setError(error.response?.data?.message || "Failed to load categories");
+        setError(error.response?.data?.message || "Failed to load categories");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   const handleCreateBudget = async (e) => {
     e.preventDefault();
+    
     if (!newBudget.budget || parseFloat(newBudget.budget) <= 0) {
       setMessage({ type: 'error', text: 'Please enter a valid budget amount' });
       return;
     }
+
     setCreating(true);
+    setMessage({ type: '', text: '' });
+
     try {
-      await createBudget({
+      const categoryInfo = predefinedCategories.find(c => c.name === newBudget.category);
+      
+      const payload = {
         category: newBudget.category,
-        name: newBudget.name || predefinedCategories.find(c => c.name === newBudget.category)?.display,
+        name: newBudget.name.trim() || categoryInfo?.display || newBudget.category,
         budget: parseFloat(newBudget.budget),
         period: "monthly",
         alertThreshold: newBudget.alertThreshold
-      });
+      };
+
+      console.log('📤 Creating budget:', payload);  // Debug
+      
+      const response = await createBudget(payload);
+      console.log('✅ Budget created:', response.data);
+
       setMessage({ type: 'success', text: 'Budget created!' });
       setShowCreateForm(false);
       setNewBudget({ category: 'food', name: '', budget: '', alertThreshold: 80 });
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to create budget' });
+      console.error('Create budget error:', error.response?.data);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.error || error.response?.data?.message || 'Failed to create budget' 
+      });
     } finally {
       setCreating(false);
     }
@@ -105,18 +166,32 @@ function Categories() {
         setMessage({ type: 'error', text: 'Invalid budget amount' });
         return;
       }
+
       const existingBudget = categories.find(c => c.name === categoryName && c.budget?.id);
+
       if (existingBudget?.budget?.id) {
         await updateBudget(existingBudget.budget.id, { budget: budgetAmount });
       } else {
-        await createBudget({ category: categoryName.toLowerCase(), name: categoryName, budget: budgetAmount, period: "monthly", alertThreshold: 80 });
+        const categoryInfo = predefinedCategories.find(c => c.name === categoryName.toLowerCase());
+        await createBudget({ 
+          category: categoryName.toLowerCase(), 
+          name: categoryInfo?.display || categoryName, 
+          budget: budgetAmount, 
+          period: "monthly", 
+          alertThreshold: 80 
+        });
       }
+
       setEditingId(null);
       setMessage({ type: 'success', text: 'Budget updated!' });
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to update' });
+      console.error('Save budget error:', error.response?.data);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.error || error.response?.data?.message || 'Failed to update' 
+      });
     }
   };
 
@@ -128,7 +203,8 @@ function Categories() {
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete' });
+      console.error('Delete budget error:', error.response?.data);
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to delete' });
     }
   };
 
@@ -237,7 +313,7 @@ function Categories() {
         </div>
       )}
 
-      {/* Categories Grid */}
+      {/* Categories Grid — EXACTLY THE SAME AS YOUR ORIGINAL, no changes to JSX below */}
       {!error && categories.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {categories.map((cat) => {
@@ -316,7 +392,6 @@ function Categories() {
         </div>
       )}
 
-      {/* Empty */}
       {!error && !loading && categories.length === 0 && (
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-16 text-center">
           <div className="w-20 h-20 bg-gray-700/50 rounded-2xl flex items-center justify-center mx-auto mb-6"><TagIcon className="h-10 w-10 text-gray-500" /></div>

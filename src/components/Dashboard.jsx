@@ -144,7 +144,7 @@ function DashboardHome() {
           <span className="text-gray-400 text-sm font-medium">{name}</span>
           <div className={`p-2.5 rounded-xl ${c.bg} border ${c.border}`}><Icon className={`h-5 w-5 ${c.text}`} /></div>
         </div>
-        <p className="text-3xl font-bold text-white mb-2">{value}</p>
+        <p className="text-2xl font-bold text-white mb-2">{value}</p>
         {trend && (
           <div className="flex items-center gap-1.5">
             {trend > 0 ? <ArrowTrendingUpIcon className="h-4 w-4 text-emerald-400" /> : <ArrowTrendingDownIcon className="h-4 w-4 text-red-400" />}

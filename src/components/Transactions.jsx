@@ -15,9 +15,12 @@ import {
   ChevronRightIcon
 } from "@heroicons/react/24/outline";
 import { getTransactions, deleteTransaction } from "../services/api";
+import { useCurrency } from "../context/CurrencyContext";
 import { Link } from "react-router-dom";
 
 function Transactions() {
+  const { formatAmount: formatCurrency } = useCurrency();
+  
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -45,14 +48,12 @@ function Transactions() {
         search: search || undefined
       });
 
-      // Backend returns: { success: true, data: [...], count, total, page, pages }
       const data = response.data?.data || response.data || [];
       setTransactions(Array.isArray(data) ? data : []);
       setTotalPages(response.data?.pages || 1);
       setTotalCount(response.data?.total || data.length);
       setError(null);
     } catch (error) {
-      
       setError(error.response?.data?.message || "Failed to load transactions");
       setTransactions([]);
     } finally {
@@ -101,7 +102,7 @@ function Transactions() {
 
   const formatAmount = (amount, type) => {
     const prefix = type === 'income' ? '+' : '-';
-    return `${prefix}$${Math.abs(amount).toFixed(2)}`;
+    return `${prefix}${formatCurrency(Math.abs(amount))}`;
   };
 
   const getSortIcon = (field) => {
@@ -111,7 +112,6 @@ function Transactions() {
       <ArrowUpIcon className="h-4 w-4" />;
   };
 
-  // Calculate totals
   const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -170,16 +170,16 @@ function Transactions() {
         </div>
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
           <p className="text-xs text-gray-500 mb-1">Income</p>
-          <p className="text-xl font-bold text-emerald-400">+${totalIncome.toFixed(2)}</p>
+          <p className="text-xl font-bold text-emerald-400">+{formatCurrency(totalIncome)}</p>
         </div>
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
           <p className="text-xs text-gray-500 mb-1">Expenses</p>
-          <p className="text-xl font-bold text-red-400">-${totalExpenses.toFixed(2)}</p>
+          <p className="text-xl font-bold text-red-400">-{formatCurrency(totalExpenses)}</p>
         </div>
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
           <p className="text-xs text-gray-500 mb-1">Balance</p>
           <p className={`text-xl font-bold ${totalIncome - totalExpenses >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            ${(totalIncome - totalExpenses).toFixed(2)}
+            {formatCurrency(totalIncome - totalExpenses)}
           </p>
         </div>
       </div>

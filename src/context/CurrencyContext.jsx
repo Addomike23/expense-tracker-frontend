@@ -21,29 +21,17 @@ export function CurrencyProvider({ children }) {
         return 'USD';
     });
 
-    const [symbol, setSymbol] = useState('$');
-
-    useEffect(() => {
-        loadUserCurrency();
-    }, []);
-
-    const loadUserCurrency = async () => {
-        try {
-            const response = await getCurrentUser();
-            const user = response.data?.user || response.data;
-            if (user?.currency) {
-                setCurrency(user.currency);
-                setSymbol(getSymbolForCurrency(user.currency));
-                localStorage.setItem('user', JSON.stringify({
-                    ...JSON.parse(localStorage.getItem('user') || '{}'),
-                    currency: user.currency,
-                    currencySymbol: user.currencySymbol
-                }));
+    const [symbol, setSymbol] = useState(() => {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+            try {
+                return JSON.parse(stored)?.currencySymbol || '$';
+            } catch {
+                return '$';
             }
-        } catch (err) {
-            // Use localStorage fallback
         }
-    };
+        return '$';
+    });
 
     const getSymbolForCurrency = (code) => {
         const symbols = {
@@ -54,13 +42,63 @@ export function CurrencyProvider({ children }) {
         return symbols[code] || '$';
     };
 
+    // Sync currency from localStorage whenever it changes
+    const syncFromStorage = () => {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+            try {
+                const user = JSON.parse(stored);
+                if (user.currency && user.currency !== currency) {
+                    setCurrency(user.currency);
+                    setSymbol(user.currencySymbol || getSymbolForCurrency(user.currency));
+                }
+            } catch {}
+        }
+    };
+
+    // Load from backend on mount (if token exists)
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+        if (!token) return; // No token = skip API call
+
+        const loadUserCurrency = async () => {
+            try {
+                const response = await getCurrentUser();
+                const user = response.data?.user || response.data;
+                if (user?.currency) {
+                    setCurrency(user.currency);
+                    setSymbol(user.currencySymbol || getSymbolForCurrency(user.currency));
+                    // Update localStorage with fresh data
+                    const stored = JSON.parse(localStorage.getItem('user') || '{}');
+                    localStorage.setItem('user', JSON.stringify({
+                        ...stored,
+                        currency: user.currency,
+                        currencySymbol: user.currencySymbol
+                    }));
+                }
+            } catch (err) {
+                // Fallback to localStorage
+                syncFromStorage();
+            }
+        };
+
+        loadUserCurrency();
+    }, []);
+
+    // Listen for storage changes
+    useEffect(() => {
+        window.addEventListener('storage', syncFromStorage);
+        return () => window.removeEventListener('storage', syncFromStorage);
+    }, [currency]);
+
     const setUserCurrency = (newCurrency) => {
         setCurrency(newCurrency);
-        setSymbol(getSymbolForCurrency(newCurrency));
+        const newSymbol = getSymbolForCurrency(newCurrency);
+        setSymbol(newSymbol);
         // Update localStorage
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         user.currency = newCurrency;
-        user.currencySymbol = getSymbolForCurrency(newCurrency);
+        user.currencySymbol = newSymbol;
         localStorage.setItem('user', JSON.stringify(user));
     };
 
