@@ -133,10 +133,10 @@ function Categories() {
         alertThreshold: newBudget.alertThreshold
       };
 
-      console.log('📤 Creating budget:', payload);  // Debug
+      
       
       const response = await createBudget(payload);
-      console.log('✅ Budget created:', response.data);
+     
 
       setMessage({ type: 'success', text: 'Budget created!' });
       setShowCreateForm(false);
@@ -144,7 +144,7 @@ function Categories() {
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      console.error('Create budget error:', error.response?.data);
+      
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.error || error.response?.data?.message || 'Failed to create budget' 
@@ -187,7 +187,7 @@ function Categories() {
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      console.error('Save budget error:', error.response?.data);
+     
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.error || error.response?.data?.message || 'Failed to update' 
@@ -203,7 +203,7 @@ function Categories() {
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
-      console.error('Delete budget error:', error.response?.data);
+     
       setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to delete' });
     }
   };

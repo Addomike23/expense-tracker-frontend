@@ -2,10 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser } from '../services/api';
 
 const CurrencyContext = createContext({
-    currency: 'USD',
-    symbol: '$',
+    currency: 'GHS',
+    symbol: '₵',
     setUserCurrency: () => {},
-    formatAmount: (amount) => `$${amount}`,
+    formatAmount: (amount) => `₵${amount}`,
 });
 
 export function CurrencyProvider({ children }) {
@@ -13,24 +13,24 @@ export function CurrencyProvider({ children }) {
         const stored = localStorage.getItem('user');
         if (stored) {
             try {
-                return JSON.parse(stored)?.currency || 'USD';
+                return JSON.parse(stored)?.currency || 'GHS';
             } catch {
-                return 'USD';
+                return 'GHS';
             }
         }
-        return 'USD';
+        return 'GHS';
     });
 
     const [symbol, setSymbol] = useState(() => {
         const stored = localStorage.getItem('user');
         if (stored) {
             try {
-                return JSON.parse(stored)?.currencySymbol || '$';
+                return JSON.parse(stored)?.currencySymbol || '₵';
             } catch {
-                return '$';
+                return '₵';
             }
         }
-        return '$';
+        return '₵';
     });
 
     const getSymbolForCurrency = (code) => {
